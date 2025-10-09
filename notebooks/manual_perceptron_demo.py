@@ -5,33 +5,64 @@ app = marimo.App(width="medium")
 
 
 @app.cell
+def _(mo):
+    mo.md(
+        r"""
+    # Manual perceptron
+    This notebook is a demonstration of an "artificial neuron". An example dataset with acceleration and heart rate data (together with activity classification) is used, and the user can "tune" the neuron to the data to make it output the correct classification.
+    """
+    )
+    return
+
+
+@app.cell
 def _():
     # Imports
+    import marimo as mo
     import numpy as np
+    import plotly.express as px
     import plotly.graph_objects as go
     import polars as pl
-    import marimo as mo
-    import plotly.express as px
+
     return go, mo, np, pl, px
 
 
 @app.cell
 def _(mo):
-    # Parameters
+    # Define interactive sliders, used to set neuron weights
     debounce_buttons = True
     w1 = mo.ui.slider(
-        start=-3, stop=3, step=0.1, value=0, label="w1", show_value=True, debounce=debounce_buttons
+        start=-3,
+        stop=3,
+        step=0.1,
+        value=0,
+        label="w1",
+        show_value=True,
+        debounce=debounce_buttons,
     )
     w2 = mo.ui.slider(
-        start=-3, stop=3, step=0.1, value=0, label="w2", show_value=True, debounce=debounce_buttons
+        start=-3,
+        stop=3,
+        step=0.1,
+        value=0,
+        label="w2",
+        show_value=True,
+        debounce=debounce_buttons,
     )
     b = mo.ui.slider(
-        start=-3, stop=3, step=0.1, value=0, label="b", show_value=True, debounce=debounce_buttons
+        start=-3,
+        stop=3,
+        step=0.1,
+        value=0,
+        label="b",
+        show_value=True,
+        debounce=debounce_buttons,
     )
 
-    x1_range = (-4, 4)
-    x2_range = (-4, 4)
-    z_range = (-5, 5)
+    # Value ranges, used in plotting
+    x1_range = (-4, 4)  # Normalized acceleration range
+    x2_range = (-4, 4)  # Normalized heart rate range
+    z_range = (-5, 5)  # Activation value range
     return b, w1, w2, x1_range, x2_range, z_range
 
 
@@ -43,7 +74,7 @@ def _(pl):
         "https://raw.githubusercontent.com/mh-skjelvareid/inf-1600-intro-ai/main/data/simple_acc_hr_dataset_v2.csv"
     )
 
-    # df # Show dataframe
+    df  # Show dataframe
     return (df,)
 
 
@@ -56,7 +87,11 @@ def _(df, np, pl):
     X_mean = np.mean(X_orig, axis=0)
     X_std = np.std(X_orig, axis=0)
     X = (X_orig - X_mean) / X_std
+    return X, y
 
+
+@app.cell
+def _(X, df, pl):
     # Create a dataframe with normalized data - easier visualization
     df_norm = pl.DataFrame(
         {
@@ -66,11 +101,11 @@ def _(df, np, pl):
             "state_int": df["state_int"],
         }
     )
-    # df_norm # Show dataframe
-    return X, df_norm, y
+    df_norm  # Show dataframe
+    return (df_norm,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(df, px):
     px.scatter(
         df,
@@ -84,7 +119,7 @@ def _(df, px):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(df_norm, px):
     # Compare original and normalized data
     px.scatter(
@@ -101,10 +136,21 @@ def _(df_norm, px):
 
 
 @app.cell
+def _(np, x1_range, x2_range):
+    # Create grid for "background" logit heatmap
+    x1_ax = np.linspace(start=x1_range[0], stop=x1_range[1])
+    x2_ax = np.linspace(start=x2_range[0], stop=x2_range[1])
+    x1_grid, x2_grid = np.meshgrid(x1_ax, x2_ax)
+    return x1_ax, x1_grid, x2_ax, x2_grid
+
+
+@app.cell
 def _(X, b, np, w1, w2, x1_grid, x2_grid):
-    # Use weights to calculate "logit" z for points and for grid
+    # Use weights to calculate "logit" z for each data point
     z = X @ np.array([w1.value, w2.value]) + b.value
     y_pred = z >= 0
+
+    # Use weights to calcuate "grid" values (used as background in visualization)
     z_grid = x1_grid * w1.value + x2_grid * w2.value + b.value
     return y_pred, z_grid
 
@@ -117,15 +163,6 @@ def _(y, y_pred):
     exercise_incorrect = (y == 1) & (y_pred == 0)
     rest_incorrect = (y == 0) & (y_pred == 1)
     return exercise_correct, exercise_incorrect, rest_correct, rest_incorrect
-
-
-@app.cell
-def _(np, x1_range, x2_range):
-    # Create grid for "background" logit heatmap
-    x1_ax = np.linspace(start=x1_range[0], stop=x1_range[1])
-    x2_ax = np.linspace(start=x2_range[0], stop=x2_range[1])
-    x1_grid, x2_grid = np.meshgrid(x1_ax, x2_ax)
-    return x1_ax, x1_grid, x2_ax, x2_grid
 
 
 @app.cell(hide_code=True)
